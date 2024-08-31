@@ -1,0 +1,74 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@main
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@master
+
+    - name: Build multi-platform images
+      run: |
+        docker buildx build --platform linux/amd64,linux/arm64 -t tmp:latest .
+
+  scan:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@main
+
+    - name: Set up Trivy
+      uses: aquasecurity/trivy-action@master
+
+    - name: Scan image with Trivy
+      run: |
+        trivy image tmp:latest
+
+  fix:
+    needs: scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@main
+
+    - name: Fix vulnerabilities with COPA
+      uses: project-copacetic/copa-action@main
+      with:
+        image: tmp:latest
+        image-report: copa-report.txt
+        patched-tag: tmp:fixed
+        output: fixed-image.tar
+
+  push:
+    needs: fix
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@main
+
+    - name: Load fixed image
+      run: docker load -i fixed-image.tar
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@master
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Push fixed image
+      run: |
+        docker tag tmp:fixed tmp:latest
+        docker push tmp:latest
