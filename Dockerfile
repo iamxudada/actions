@@ -1,1 +1,1 @@
-FROM postgres
+FROM quay.io/supiedt/python
