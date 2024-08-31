@@ -33,7 +33,7 @@ jobs:
 
     - name: Scan image with Trivy
       run: |
-        trivy image tmp:latest
+        trivy image --format table --vuln-type os,library --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL tmp:latest
 
   fix:
     needs: scan
