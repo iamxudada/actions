@@ -20,6 +20,10 @@ jobs:
       run: |
         docker buildx build --platform linux/amd64,linux/arm64 -t tmp:latest .
 
+    - name: List images
+      run: |
+        docker images
+
   scan:
     needs: build
     runs-on: ubuntu-latest
@@ -33,7 +37,7 @@ jobs:
 
     - name: Scan image with Trivy
       run: |
-        trivy image -f json -o trivy.json --vuln-type os,library --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL --ignore-unfixed tmp:latest
+        trivy image -f json -o trivy.json --scanners vuln --vuln-type os,library --ignore-unfixed tmp:latest
 
   fix:
     needs: scan
