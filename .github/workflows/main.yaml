@@ -32,13 +32,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@main
 
-    - name: Set up Trivy
+    - name: Set up Trivy and Scan
       uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: tmp:latest
+        format: 'json'
+        output: 'trivy-results.json'
+        exit-code: '1'
+        ignore-unfixed: true
+        vuln-type: 'os,library'
+        severity: 'CRITICAL,HIGH,MEDIUM,LOW,UNKNOWN'
 
-    - name: Scan image with Trivy
-      run: |
-        trivy image -f json -o trivy.json --scanners vuln --vuln-type os,library --ignore-unfixed tmp:latest
-
+  
   fix:
     needs: scan
     runs-on: ubuntu-latest
@@ -51,8 +56,8 @@ jobs:
       uses: project-copacetic/copa-action@main
       with:
         image: tmp:latest
-        image-report: copa-report.txt
-        patched-tag: tmp:fixed
+        image-report: 'trivy-results.json'
+        patched-tag: fixed
         output: fixed-image.tar
 
   push:
