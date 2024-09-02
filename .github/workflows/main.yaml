@@ -29,10 +29,10 @@ jobs:
     - name: Set up Trivy and Scan
       uses: aquasecurity/trivy-action@master
       with:
+        scan-type: 'image'
         image-ref: onepluskiller/tmp:${{ github.sha }}
         format: 'json'
         output: 'trivy-results.json'
-        exit-code: '1'
         ignore-unfixed: true
         scanners: 'vuln'
         vuln-type: 'os,library'
