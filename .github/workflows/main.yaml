@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  run:
+  run-amd64:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,13 +24,13 @@ jobs:
 
     - name: Build multi-platform images
       run: |
-        docker buildx build --push --platform linux/amd64,linux/arm64 -t onepluskiller/tmp:${{ github.sha }} .
+        docker buildx build --push --platform linux/amd64 -t onepluskiller/tmp:${{ github.sha }}-amd64 .
 
     - name: Set up Trivy and Scan
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: 'image'
-        image-ref: onepluskiller/tmp:${{ github.sha }}
+        image-ref: onepluskiller/tmp:${{ github.sha }}-amd64
         format: 'json'
         output: 'trivy-results.json'
         ignore-unfixed: true
@@ -41,10 +41,75 @@ jobs:
     - name: Fix vulnerabilities with COPA
       uses: project-copacetic/copa-action@main
       with:
-        image: onepluskiller/tmp:${{ github.sha }}
+        image: onepluskiller/tmp:${{ github.sha }}-amd64
         image-report: 'trivy-results.json'
-        patched-tag: fixed
+        patched-tag: fixed-amd64
 
     - name: Push fixed image
       run: |
-        docker push onepluskiller/tmp:fixed
+        docker push onepluskiller/tmp:fixed-amd64
+  
+  run-arm64:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@main
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@master
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@master
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build multi-platform images
+      run: |
+        docker buildx build --push --platform linux/arm64 -t onepluskiller/tmp:${{ github.sha }}-arm64 .
+
+    - name: Set up Trivy and Scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'image'
+        image-ref: onepluskiller/tmp:${{ github.sha }}-arm64
+        format: 'json'
+        output: 'trivy-results.json'
+        ignore-unfixed: true
+        scanners: 'vuln'
+        vuln-type: 'os,library'
+        severity: 'CRITICAL,HIGH,MEDIUM,LOW,UNKNOWN'
+
+    - name: Fix vulnerabilities with COPA
+      uses: project-copacetic/copa-action@main
+      with:
+        image: onepluskiller/tmp:${{ github.sha }}-arm64
+        image-report: 'trivy-results.json'
+        patched-tag: fixed-amd64
+
+    - name: Push fixed image
+      run: |
+        docker push onepluskiller/tmp:fixed-arm64
+  
+  multi-platform-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@main
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@master
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Create multi-platform manifest
+      run: |
+        docker manifest create onepluskiller/tmp:fixed onepluskiller/tmp:fixed-amd64 onepluskiller/tmp:fixed-arm64
+
+    - name: Push multi-platform manifest
+      run: |
+        docker manifest push onepluskiller/tmp:fixed
+        
