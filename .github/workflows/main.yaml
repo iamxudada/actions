@@ -44,12 +44,7 @@ jobs:
         image: onepluskiller/tmp:${{ github.sha }}
         image-report: 'trivy-results.json'
         patched-tag: fixed
-        output: fixed-image.tar
-
-    - name: Load fixed image
-      run: docker load -i fixed-image.tar
 
     - name: Push fixed image
       run: |
-        docker tag onepluskiller/tmp:fixed onepluskiller/tmp
-        docker push onepluskiller/tmp
+        docker push onepluskiller/tmp:fixed
